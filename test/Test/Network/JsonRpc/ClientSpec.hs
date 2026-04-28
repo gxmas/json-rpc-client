@@ -19,7 +19,7 @@ spec = do
   describe "Request tracking" $ do
     it "request appears in pending" $ do
       c <- newClient defaultClientConfig
-      pr <- request c "method1" NoParams
+      _ <- request c "method1" NoParams
       ps <- pending c
       length ps `shouldBe` 1
 
@@ -77,16 +77,18 @@ spec = do
         [ IntentRequest "m1" NoParams
         , IntentRequest "m2" NoParams
         ]
-      let [id1, id2] = pendingBatchIds pb
-      let resps =
-            [ ResponseSuccess (Success Null (Just id1))
-            , ResponseSuccess (Success Null (Just id2))
-            ]
-      results <- handleBatchResponse c resps
-      length results `shouldBe` 2
-      all isMatched results `shouldBe` True
-      ps <- pending c
-      length ps `shouldBe` 0
+      case pendingBatchIds pb of
+        [id1, id2] -> do
+          let resps =
+                [ ResponseSuccess (Success Null (Just id1))
+                , ResponseSuccess (Success Null (Just id2))
+                ]
+          results <- handleBatchResponse c resps
+          length results `shouldBe` 2
+          all isMatched results `shouldBe` True
+          ps <- pending c
+          length ps `shouldBe` 0
+        ids -> expectationFailure $ "expected 2 batch ids, got " <> show (length ids)
 
   describe "Custom id generator" $ do
     it "uses the custom generator" $ do
